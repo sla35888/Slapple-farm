@@ -57,13 +57,30 @@ local lobbyTeleport1 = Workspace:FindFirstChild("Lobby") and Workspace.Lobby:Fin
 if lobbyTeleport1 then
     if lobbyTeleport1:IsA("Model") then
         hrp.CFrame = lobbyTeleport1:GetPivot()
-    elseif lobbyTeleport1:IsA("BasePart") then
+    elseif lobbyTeleport1:IsA("BaseBase") or lobbyTeleport1:IsA("BasePart") then
         hrp.CFrame = lobbyTeleport1.CFrame
     end
 end
 
--- Espera exatamente 0.3 segundos
+-- Espera exatamente 0.3 segundos e aguarda receber uma Tool no inventário ou personagem
 task.wait(0.3)
+
+local function HasTool()
+    if Player.Character then
+        if Player.Character:FindFirstChildOfClass("Tool") then
+            return true
+        end
+    end
+    if Player.Backpack and Player.Backpack:FindFirstChildOfClass("Tool") then
+        return true
+    end
+    return false
+end
+
+-- Fica em espera até receber uma Tool (slapple)
+while not HasTool() do
+    task.wait(0.1)
+end
 
 -- Etapa 2: Localizar a pasta Arena > island5 > Slapples > Slapple > Glove
 local arenaFolder = Workspace:FindFirstChild("Arena")
@@ -77,29 +94,23 @@ if not gloveFolder then
     return
 end
 
--- Coleta todas as luvas dentro da pasta Glove
+-- Coleta todas as luvas dentro da pasta Glove sem verificar transparência
 local glovesToVisit = {}
 for _, child in ipairs(gloveFolder:GetChildren()) do
     if child:IsA("BasePart") then
-        -- Verifica se a transparência é estritamente 0 (ignora se for 1 ou diferente de 0)
-        if child.Transparency == 0 then
-            table.insert(glovesToVisit, child)
-        end
+        table.insert(glovesToVisit, child)
     elseif child:IsA("Model") then
-        local primary = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
-        if primary and primary.Transparency == 0 then
-            table.insert(glovesToVisit, child)
-        end
+        table.insert(glovesToVisit, child)
     end
 end
 
--- Se todas estiverem invisíveis (nenhuma encontrada com transparência 0), executa serverhop
+-- Se não houver luvas na pasta, executa serverhop
 if #glovesToVisit == 0 then
     ServerHop()
     return
 end
 
--- Etapa 3: Teleportar para cada uma com transparência = 0
+-- Etapa 3: Teleportar para cada glove existente
 for _, gloveObj in ipairs(glovesToVisit) do
     if gloveObj:IsA("BasePart") then
         hrp.CFrame = gloveObj.CFrame + Vector3.new(0, 3, 0)
@@ -109,5 +120,5 @@ for _, gloveObj in ipairs(glovesToVisit) do
     task.wait(0.5) -- Pequeno respiro entre os teleports para estabilizar
 end
 
--- Ao terminar de percorrer todas as luvas válidas, realiza o serverhop
+-- Ao terminar de percorrer todas as luvas, realiza o serverhop
 ServerHop()
