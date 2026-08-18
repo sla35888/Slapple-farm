@@ -57,19 +57,17 @@ local lobbyTeleport1 = Workspace:FindFirstChild("Lobby") and Workspace.Lobby:Fin
 if lobbyTeleport1 then
     if lobbyTeleport1:IsA("Model") then
         hrp.CFrame = lobbyTeleport1:GetPivot()
-    elseif lobbyTeleport1:IsA("BaseBase") or lobbyTeleport1:IsA("BasePart") then
+    elseif lobbyTeleport1:IsA("BasePart") then
         hrp.CFrame = lobbyTeleport1.CFrame
     end
 end
 
--- Espera exatamente 0.3 segundos e aguarda receber uma Tool no inventário ou personagem
+-- Espera 0.3 segundos e aguarda até o jogador receber uma Tool (slapple) no inventário ou personagem
 task.wait(0.3)
 
 local function HasTool()
-    if Player.Character then
-        if Player.Character:FindFirstChildOfClass("Tool") then
-            return true
-        end
+    if Player.Character and Player.Character:FindFirstChildOfClass("Tool") then
+        return true
     end
     if Player.Backpack and Player.Backpack:FindFirstChildOfClass("Tool") then
         return true
@@ -77,48 +75,53 @@ local function HasTool()
     return false
 end
 
--- Fica em espera até receber uma Tool (slapple)
 while not HasTool() do
     task.wait(0.1)
 end
 
--- Etapa 2: Localizar a pasta Arena > island5 > Slapples > Slapple > Glove
+-- Etapa 2: Localizar a estrutura Arena > island5 > Slapples > Slapple > Glove
 local arenaFolder = Workspace:FindFirstChild("Arena")
 local island5 = arenaFolder and arenaFolder:FindFirstChild("island5")
 local slapples = island5 and island5:FindFirstChild("Slapples")
-local slapple = slapples and slapples:FindFirstChild("Slapple")
-local gloveFolder = slapple and slapple:FindFirstChild("Glove")
 
-if not gloveFolder then
+if not slapples then
     ServerHop()
     return
 end
 
--- Coleta todas as luvas dentro da pasta Glove sem verificar transparência
+-- Coleta todas as meshparts ou partes de Glove dentro de cada Slapple
 local glovesToVisit = {}
-for _, child in ipairs(gloveFolder:GetChildren()) do
-    if child:IsA("BasePart") then
-        table.insert(glovesToVisit, child)
-    elseif child:IsA("Model") then
-        table.insert(glovesToVisit, child)
+for _, slappleModel in ipairs(slapples:GetChildren()) do
+    if slappleModel.Name == "Slapple" then
+        local glovePart = slappleModel:FindFirstChild("Glove")
+        if glovePart then
+            if glovePart:IsA("MeshPart") or glovePart:IsA("BasePart") then
+                table.insert(glovesToVisit, glovePart)
+            elseif glovePart:IsA("Model") then
+                local primary = glovePart.PrimaryPart or glovePart:FindFirstChildWhichIsA("BasePart")
+                if primary then
+                    table.insert(glovesToVisit, primary)
+                end
+            end
+        end
     end
 end
 
--- Se não houver luvas na pasta, executa serverhop
+-- Se não encontrar nenhum Glove, executa o serverhop
 if #glovesToVisit == 0 then
     ServerHop()
     return
 end
 
--- Etapa 3: Teleportar para cada glove existente
+-- Etapa 3: Teleportar para cada Glove coletada
 for _, gloveObj in ipairs(glovesToVisit) do
     if gloveObj:IsA("BasePart") then
         hrp.CFrame = gloveObj.CFrame + Vector3.new(0, 3, 0)
     elseif gloveObj:IsA("Model") then
         hrp.CFrame = gloveObj:GetPivot() + Vector3.new(0, 3, 0)
     end
-    task.wait(0.5) -- Pequeno respiro entre os teleports para estabilizar
+    task.wait(0.5) -- Respiro entre os teleports
 end
 
--- Ao terminar de percorrer todas as luvas, realiza o serverhop
+-- Etapa 4: Ao terminar de percorrer todas, realiza o serverhop
 ServerHop()
